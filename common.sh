@@ -31,7 +31,8 @@ install_apps() {
     log "Installing common packages"
     sudo dnf install -y \
         vim wget git konsole neovim lazygit ripgrep fd-find curl gcc \
-        tree-sitter-cli make unzip tar gzip flatpak btop vlc libreoffice
+        tree-sitter-cli make unzip tar gzip flatpak btop vlc libreoffice \
+        blender obs-studio
 
     log "Installing Ghostty"
     if ! command -v ghostty >/dev/null 2>&1; then
@@ -88,8 +89,6 @@ install_apps() {
 
 install_photogimp() {
     log "Setting up PhotoGIMP"
-
-    # PhotoGIMP replaces GIMP configuration files, so start GIMP once first.
     timeout 15s flatpak run org.gimp.GIMP >/dev/null 2>&1 || true
     pkill -x gimp-3.0 >/dev/null 2>&1 || true
     pkill -x gimp >/dev/null 2>&1 || true
@@ -103,9 +102,6 @@ install_photogimp() {
 
 install_davinci_resolve() {
     log "Installing DaVinci Resolve"
-
-    # Blackmagic's Linux download requires a web form, so it cannot be
-    # downloaded unattended. If the installer is already in Downloads, use it.
     local installer
     installer="$(find "$HOME/Downloads" -maxdepth 1 -type f -iname 'DaVinci_Resolve*_Linux.run' -print -quit 2>/dev/null || true)"
 
@@ -113,7 +109,6 @@ install_davinci_resolve() {
         sudo dnf install -y libxcrypt-compat libcurl mesa-libGLU fuse fuse-libs
         chmod +x "$installer"
         sudo SKIP_PACKAGE_CHECK=1 "$installer" -i
-
         if [[ -d /opt/resolve/libs ]]; then
             sudo mkdir -p /opt/resolve/libs/disabled-libraries
             sudo bash -c 'shopt -s nullglob; mv /opt/resolve/libs/libglib* /opt/resolve/libs/libgio* /opt/resolve/libs/libgmodule* /opt/resolve/libs/libgobject* /opt/resolve/libs/disabled-libraries/ 2>/dev/null || true'
@@ -142,23 +137,17 @@ ask_gaming() {
 
 install_icloud_sync() {
     printf '\nWARNING: iCloud sync uses Snap. This will install and configure Snap on Fedora.\n'
-    if ! ask_yes_no "Continue with Snap and iCloud sync?"; then
-        return
-    fi
-
+    if ! ask_yes_no "Continue with Snap and iCloud sync?"; then return; fi
     log "Setting up Snap"
     sudo dnf install -y snapd
     sudo ln -sf /var/lib/snapd/snap /snap
     sudo systemctl enable --now snapd.socket || true
-
     log "Installing iCloud for Linux"
     sudo snap install icloud-for-linux
 }
 
 ask_icloud_sync() {
-    if ask_yes_no "Set up iCloud sync?"; then
-        install_icloud_sync
-    fi
+    if ask_yes_no "Set up iCloud sync?"; then install_icloud_sync; fi
 }
 
 install_proton_pass() {
@@ -172,9 +161,7 @@ install_proton_pass() {
 }
 
 ask_proton_pass() {
-    if ask_yes_no "Install Proton Pass as your password manager?"; then
-        install_proton_pass
-    fi
+    if ask_yes_no "Install Proton Pass as your password manager?"; then install_proton_pass; fi
 }
 
 install_cursor() {
