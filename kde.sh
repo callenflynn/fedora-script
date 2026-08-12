@@ -8,6 +8,9 @@ log "Installing KDE Plasma desktop"
 sudo dnf group install -y "KDE Plasma Workspaces"
 
 install_apps
+ask_gaming
+ask_icloud_sync
+ask_proton_pass
 install_cursor
 install_wallpapers
 
@@ -27,4 +30,4 @@ fi
 command -v kbuildsycoca6 >/dev/null 2>&1 && kbuildsycoca6 >/dev/null 2>&1 || true
 
 echo
- echo "KDE Plasma setup complete. Log out and select Plasma at the login screen if needed."
+echo "KDE Plasma setup complete. Log out and select Plasma at the login screen if needed."
