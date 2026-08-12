@@ -11,6 +11,32 @@ install_apps
 install_cursor
 install_wallpapers
 
+log "Installing GNOME extensions"
+sudo dnf install -y gnome-shell-extension-gsconnect gnome-menus
+
+# Install ArcMenu and GSConnect from the GNOME Extensions website.
+# Extension versions are selected by GNOME Shell when installed this way.
+EXTENSIONS_DIR="$HOME/.local/share/gnome-shell/extensions"
+mkdir -p "$EXTENSIONS_DIR"
+
+install_gnome_extension() {
+    local uuid="$1"
+    local url="https://extensions.gnome.org/extension-info/?pk=$uuid&shell_version=$(gnome-shell --version | sed -E 's/.* ([0-9]+)\..*/\1/')"
+    local zip
+    zip="$(mktemp --suffix=.zip)"
+    if curl -fsSL "$url" -o "$zip"; then
+        rm -rf "$EXTENSIONS_DIR/$uuid"
+        mkdir -p "$EXTENSIONS_DIR/$uuid"
+        unzip -q "$zip" -d "$EXTENSIONS_DIR/$uuid"
+    else
+        echo "Could not download GNOME extension $uuid; install it from extensions.gnome.org."
+    fi
+    rm -f "$zip"
+}
+
+install_gnome_extension "arcmenu@arcmenu.com"
+install_gnome_extension "gsconnect@andyholmes.github.io"
+
 log "Configuring GNOME dark mode and cursor"
 gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' || true
 gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark' || true
@@ -25,4 +51,5 @@ fi
 gsettings set org.gnome.desktop.interface monospace-font-name 'Monospace 11' || true
 
 echo
- echo "GNOME setup complete. Log out and select GNOME at the login screen if needed."
+echo "GNOME setup complete. Log out and select GNOME at the login screen if needed."
+echo "ArcMenu and GSConnect were installed."
