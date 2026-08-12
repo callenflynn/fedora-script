@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 WALLPAPER_DIR="$HOME/Pictures/Wallpapers"
 CURSOR_DIR="$HOME/.local/share/icons/McMojave-cursors"
 
@@ -86,7 +86,6 @@ install_photogimp() {
     log "Setting up PhotoGIMP"
     mkdir -p "$HOME/Downloads"
 
-    # Start GIMP once so its Flatpak config directories are created.
     timeout 15s flatpak run org.gimp.GIMP >/dev/null 2>&1 || true
     sleep 2
     pkill -x gimp-3.0 >/dev/null 2>&1 || true
@@ -94,8 +93,6 @@ install_photogimp() {
 
     local zip_file="$HOME/Downloads/PhotoGIMP-linux.zip"
     curl -fL "https://github.com/Diolinux/PhotoGIMP/releases/latest/download/PhotoGIMP-linux.zip" -o "$zip_file"
-
-    # PhotoGIMP's Linux instructions say to extract the archive into ~.
     unzip -o "$zip_file" -d "$HOME"
     rm -f "$zip_file"
 }
@@ -119,11 +116,8 @@ install_davinci_resolve() {
 install_gaming_apps() {
     log "Installing gaming applications"
     flatpak install -y flathub com.valvesoftware.Steam
-
-    # Prism Launcher provides Fedora RPMs through its official COPR instructions.
     sudo dnf -y copr enable g3tchoo/prismlauncher
     sudo dnf install -y prismlauncher
-
     flatpak install -y flathub com.heroicgameslauncher.hgl
 }
 
@@ -182,8 +176,8 @@ install_cursor() {
 install_wallpapers() {
     log "Installing wallpapers"
     mkdir -p "$WALLPAPER_DIR"
-    if [[ -d "$REPO_DIR/bg" ]]; then
-        find "$REPO_DIR/bg" -maxdepth 1 -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \) -print0 |
+    if [[ -d "$SCRIPT_DIR/bg" ]]; then
+        find "$SCRIPT_DIR/bg" -maxdepth 1 -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \) -print0 |
         while IFS= read -r -d '' image; do
             cp -f "$image" "$WALLPAPER_DIR/"
         done
