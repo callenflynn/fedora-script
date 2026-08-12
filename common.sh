@@ -31,7 +31,7 @@ install_apps() {
     log "Installing common packages"
     sudo dnf install -y \
         vim wget git konsole neovim lazygit ripgrep fd-find curl gcc \
-        tree-sitter-cli make unzip tar gzip flatpak
+        tree-sitter-cli make unzip tar gzip flatpak btop vlc libreoffice
 
     log "Installing Ghostty"
     if ! command -v ghostty >/dev/null 2>&1; then
@@ -66,7 +66,11 @@ install_apps() {
         com.spotify.Client \
         com.discordapp.Discord \
         md.obsidian.Obsidian \
-        org.localsend.localsend_app
+        org.localsend.localsend_app \
+        io.github.flattool.Warehouse \
+        org.gimp.GIMP
+
+    install_photogimp
 
     log "Installing Brave Browser"
     if ! command -v brave-browser >/dev/null 2>&1; then
@@ -78,6 +82,48 @@ install_apps() {
     if command -v brave-browser >/dev/null 2>&1; then
         xdg-settings set default-web-browser brave-browser.desktop || true
     fi
+
+    install_davinci_resolve
+}
+
+install_photogimp() {
+    log "Setting up PhotoGIMP"
+
+    # PhotoGIMP replaces GIMP configuration files, so start GIMP once first.
+    timeout 15s flatpak run org.gimp.GIMP >/dev/null 2>&1 || true
+    pkill -x gimp-3.0 >/dev/null 2>&1 || true
+    pkill -x gimp >/dev/null 2>&1 || true
+
+    local zip_file="$HOME/Downloads/PhotoGIMP-linux.zip"
+    mkdir -p "$HOME/Downloads"
+    curl -fL "https://github.com/Diolinux/PhotoGIMP/releases/latest/download/PhotoGIMP-linux.zip" -o "$zip_file"
+    unzip -o "$zip_file" -d "$HOME"
+    rm -f "$zip_file"
+}
+
+install_davinci_resolve() {
+    log "Installing DaVinci Resolve"
+
+    # Blackmagic's Linux download requires a web form, so it cannot be
+    # downloaded unattended. If the installer is already in Downloads, use it.
+    local installer
+    installer="$(find "$HOME/Downloads" -maxdepth 1 -type f -iname 'DaVinci_Resolve*_Linux.run' -print -quit 2>/dev/null || true)"
+
+    if [[ -n "$installer" ]]; then
+        sudo dnf install -y libxcrypt-compat libcurl mesa-libGLU fuse fuse-libs
+        chmod +x "$installer"
+        sudo SKIP_PACKAGE_CHECK=1 "$installer" -i
+
+        if [[ -d /opt/resolve/libs ]]; then
+            sudo mkdir -p /opt/resolve/libs/disabled-libraries
+            sudo bash -c 'shopt -s nullglob; mv /opt/resolve/libs/libglib* /opt/resolve/libs/libgio* /opt/resolve/libs/libgmodule* /opt/resolve/libs/libgobject* /opt/resolve/libs/disabled-libraries/ 2>/dev/null || true'
+        fi
+        return
+    fi
+
+    echo "DaVinci Resolve was not installed automatically."
+    echo "Download the Linux installer from Blackmagic Design and place the .run file in ~/Downloads."
+    echo "Then run this script again."
 }
 
 install_gaming_apps() {
