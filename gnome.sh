@@ -8,14 +8,15 @@ log "Installing GNOME desktop"
 sudo dnf group install -y "GNOME Desktop Environment"
 
 install_apps
+ask_gaming
+ask_icloud_sync
+ask_proton_pass
 install_cursor
 install_wallpapers
 
 log "Installing GNOME extensions"
 sudo dnf install -y gnome-shell-extension-gsconnect gnome-menus
 
-# Install ArcMenu and GSConnect from the GNOME Extensions website.
-# Extension versions are selected by GNOME Shell when installed this way.
 EXTENSIONS_DIR="$HOME/.local/share/gnome-shell/extensions"
 mkdir -p "$EXTENSIONS_DIR"
 
