@@ -24,10 +24,10 @@ ask_reboot() {
     local answer
     printf '\nSetup is complete. A reboot is recommended to finish applying system changes.\n'
     while true; do
-        read -r -p 'Reboot now? [y/N] ' answer < /dev/tty
+        read -r -p 'Reboot now? [y/N] ' answer < /dev/tty || break
         case "${answer,,}" in
             y|yes) sudo systemctl reboot; return 0 ;;
-            ""|n|no) return 0 ;;
+            ""|n|no) echo "Reboot skipped. You can reboot later with: sudo systemctl reboot"; return 0 ;;
             *) echo "Please answer y or n." ;;
         esac
     done
@@ -67,6 +67,7 @@ enable_repositories() {
 
     if [[ ! -f /etc/yum.repos.d/docker-ce.repo ]]; then
         sudo dnf config-manager addrepo --from-repofile=https://download.docker.com/linux/fedora/docker-ce.repo
+        state_set repo_docker 1
     else
         echo "Docker repository is already enabled."
     fi
@@ -136,6 +137,7 @@ install_pipes_sh() {
     mkdir -p "$(dirname "$PIPES_BIN")"
     if [[ -x "$PIPES_BIN" ]]; then
         echo "pipes.sh is already installed; leaving it untouched."
+        state_set pipes_sh 1
         return
     fi
 
@@ -143,6 +145,7 @@ install_pipes_sh() {
     tmp_dir="$(mktemp -d)"
     if git clone --depth 1 https://github.com/pipeseroni/pipes.sh "$tmp_dir/pipes.sh"; then
         install -m 0755 "$tmp_dir/pipes.sh/pipes.sh" "$PIPES_BIN"
+        state_set pipes_sh 1
     else
         rm -rf "$tmp_dir"
         echo "Failed to download pipes.sh." >&2
@@ -195,6 +198,7 @@ install_apps() {
     log "Installing Ghostty"
     if ! command -v ghostty >/dev/null 2>&1; then
         sudo dnf -y copr enable scottames/ghostty
+        state_set repo_ghostty 1
         track_dnf_install ghostty ghostty
     else
         echo "Ghostty is already installed; leaving it untouched."
@@ -204,13 +208,16 @@ install_apps() {
     log "Installing Zed"
     if ! command -v zed >/dev/null 2>&1 && [[ ! -x "$HOME/.local/bin/zed" ]]; then
         curl -f https://zed.dev/install.sh | sh
+        state_set zed 1
     else
         echo "Zed is already installed; leaving it untouched."
+        state_set zed 1
     fi
 
     log "Installing fetch"
     if ! command -v fetch >/dev/null 2>&1; then
         sudo dnf -y copr enable realorangekun/fetch
+        state_set repo_fetch 1
         track_dnf_install fetch fetch
     else
         echo "fetch is already installed; leaving it untouched."
@@ -220,8 +227,10 @@ install_apps() {
     if [[ ! -e "$HOME/.config/nvim" ]]; then
         git clone https://github.com/LazyVim/starter "$HOME/.config/nvim"
         rm -rf "$HOME/.config/nvim/.git"
+        state_set lazyvim 1
     else
         echo "Neovim config already exists; leaving it untouched."
+        state_set lazyvim 1
     fi
 
     log "Installing default Flatpak applications"
@@ -236,6 +245,7 @@ install_apps() {
     log "Installing Brave Browser"
     if ! command -v brave-browser >/dev/null 2>&1; then
         sudo dnf config-manager addrepo --from-repofile=https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
+        state_set repo_brave 1
         track_dnf_install brave brave-browser
     else
         echo "Brave is already installed; leaving it untouched."
@@ -251,6 +261,7 @@ install_photogimp() {
     mkdir -p "$HOME/Downloads"
     if [[ -d "$HOME/.config/GIMP" || -d "$HOME/.var/app/org.gimp.GIMP/config/GIMP" ]]; then
         echo "GIMP configuration already exists; leaving it untouched."
+        state_set photogimp 1
         return
     fi
 
@@ -263,6 +274,7 @@ install_photogimp() {
     curl -fL "https://github.com/Diolinux/PhotoGIMP/releases/latest/download/PhotoGIMP-linux.zip" -o "$zip_file"
     unzip -o "$zip_file" -d "$HOME"
     rm -f "$zip_file"
+    state_set photogimp 1
 }
 
 install_davinci_resolve() {
@@ -274,6 +286,7 @@ install_davinci_resolve() {
         track_dnf_install davinci-dependencies libxcrypt-compat libcurl mesa-libGLU fuse fuse-libs
         chmod +x "$installer"
         sudo SKIP_PACKAGE_CHECK=1 "$installer" -i
+        state_set davinci_resolve 1
         return
     fi
 
@@ -285,6 +298,7 @@ install_gaming_apps() {
     log "Installing gaming applications"
     track_flatpak_install gaming-flatpaks com.valvesoftware.Steam com.heroicgameslauncher.hgl
     sudo dnf -y copr enable g3tchoo/prismlauncher
+    state_set repo_prismlauncher 1
     track_dnf_install gaming-prismlauncher prismlauncher
     state_set gaming 1
 }
@@ -348,11 +362,13 @@ install_cursor() {
     log "Installing McMojave cursor theme"
     if [[ -d "$CURSOR_DIR" ]]; then
         echo "McMojave cursor theme is already installed; leaving it untouched."
+        state_set cursor 1
         return
     fi
     git clone --depth 1 https://github.com/vinceliuice/McMojave-cursors "$HOME/.cache/McMojave-cursors"
     mkdir -p "$HOME/.local/share/icons"
     cp -a "$HOME/.cache/McMojave-cursors/dist" "$CURSOR_DIR"
+    state_set cursor 1
 }
 
 install_wallpapers() {
@@ -364,6 +380,7 @@ install_wallpapers() {
             cp -n "$image" "$WALLPAPER_DIR/" 2>/dev/null || true
         done
     fi
+    state_set wallpapers 1
 }
 
 set_cursor_x11() {
