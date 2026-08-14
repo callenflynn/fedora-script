@@ -87,19 +87,20 @@ if state_has_installation; then
     printf 'What would you like to do?\n'
     printf '  1) Keep the current desktop and manage optional applications\n'
     printf '  2) Switch desktop environment\n'
-    printf '  3) Re-run desktop configuration\n'
-    printf '  4) Exit\n\n'
+    printf '  3) Install or update applications only\n'
+    printf '  4) Re-run desktop configuration\n'
+    printf '  5) Exit\n\n'
 
     while true; do
-        read -r -p 'Enter 1-4: ' action
+        read -r -p 'Enter 1-5: ' action
         case "$action" in
-            1|2|3|4) break ;;
-            *) echo "Please enter 1, 2, 3, or 4." ;;
+            1|2|3|4|5) break ;;
+            *) echo "Please enter 1, 2, 3, 4, or 5." ;;
         esac
     done
 
     case "$action" in
-        4) exit 0 ;;
+        5) exit 0 ;;
         1)
             DESKTOP_SCRIPT="${CURRENT_DESKTOP}.sh"
             [[ "$DESKTOP_SCRIPT" == "gnome.sh" || "$DESKTOP_SCRIPT" == "kde.sh" ]] || {
@@ -107,29 +108,35 @@ if state_has_installation; then
                 action=2
             }
             ;;
-        2|3) ;;
+        2|4) ;;
+        3) DESKTOP_SCRIPT="apps.sh" ;;
     esac
 else
-    action=2
+    action=0
 fi
 
-if [[ "$action" == 2 || "$action" == 3 ]]; then
-    printf '\nChoose your desktop environment:\n'
+if [[ "$action" == 0 || "$action" == 2 || "$action" == 4 ]]; then
+    printf '\nChoose what to install:\n'
     printf '  1) GNOME\n'
-    printf '  2) KDE Plasma\n\n'
+    printf '  2) KDE Plasma\n'
+    printf '  3) Applications only (keep your existing desktop)\n\n'
     while true; do
-        read -r -p 'Enter 1 or 2: ' choice
+        read -r -p 'Enter 1, 2, or 3: ' choice
         case "$choice" in
             1) DESKTOP_SCRIPT="gnome.sh"; break ;;
             2) DESKTOP_SCRIPT="kde.sh"; break ;;
-            *) echo "Please enter 1 or 2." ;;
+            3) DESKTOP_SCRIPT="apps.sh"; break ;;
+            *) echo "Please enter 1, 2, or 3." ;;
         esac
     done
 fi
 
-NEW_DESKTOP="${DESKTOP_SCRIPT%.sh}"
+NEW_DESKTOP=""
+if [[ "$DESKTOP_SCRIPT" == "gnome.sh" || "$DESKTOP_SCRIPT" == "kde.sh" ]]; then
+    NEW_DESKTOP="${DESKTOP_SCRIPT%.sh}"
+fi
 
-if [[ -n "$CURRENT_DESKTOP" && "$CURRENT_DESKTOP" != "$NEW_DESKTOP" ]]; then
+if [[ -n "$CURRENT_DESKTOP" && -n "$NEW_DESKTOP" && "$CURRENT_DESKTOP" != "$NEW_DESKTOP" ]]; then
     echo
     echo "You are switching from $CURRENT_DESKTOP to $NEW_DESKTOP."
     echo "The new desktop will be installed first. The old desktop will only be removed after the new desktop installation succeeds."
