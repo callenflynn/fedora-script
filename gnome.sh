@@ -6,7 +6,7 @@ source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/common.sh"
 require_user
 
 log "Installing GNOME desktop"
-sudo dnf install -y @workstation-product-environment
+track_dnf_install desktop-gnome @workstation-product-environment
 
 install_apps
 
@@ -26,7 +26,7 @@ install_cursor
 install_wallpapers
 
 log "Installing GNOME extensions"
-sudo dnf install -y gnome-shell-extension-gsconnect gnome-menus
+track_dnf_install gnome-extensions gnome-shell-extension-gsconnect gnome-menus
 
 EXTENSIONS_DIR="$HOME/.local/share/gnome-shell/extensions"
 mkdir -p "$EXTENSIONS_DIR"
@@ -36,8 +36,9 @@ install_gnome_extension() {
     local url="https://extensions.gnome.org/extension-info/?pk=$uuid&shell_version=$(gnome-shell --version | sed -E 's/.* ([0-9]+)\..*/\1/')"
     local zip
     zip="$(mktemp --suffix=.zip)"
-    if curl -fsSL "$url" -o "$zip"; then
-        rm -rf "$EXTENSIONS_DIR/$uuid"
+    if [[ -d "$EXTENSIONS_DIR/$uuid" ]]; then
+        echo "GNOME extension $uuid is already installed; leaving it untouched."
+    elif curl -fsSL "$url" -o "$zip"; then
         mkdir -p "$EXTENSIONS_DIR/$uuid"
         unzip -q "$zip" -d "$EXTENSIONS_DIR/$uuid"
     else
@@ -61,6 +62,10 @@ if [[ -n "$FIRST_WALLPAPER" ]]; then
 fi
 
 gsettings set org.gnome.desktop.interface monospace-font-name 'Monospace 11' || true
+
+state_set desktop gnome
+state_set gaming "${INSTALL_GAMING:-0}"
+state_mark_installed
 
 echo
 echo "GNOME setup complete. Log out and select GNOME at the login screen if needed."
