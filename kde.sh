@@ -52,6 +52,11 @@ fi
 
 command -v kbuildsycoca6 >/dev/null 2>&1 && kbuildsycoca6 >/dev/null 2>&1 || true
 
+if [[ -n "${OLD_DESKTOP:-}" ]]; then
+    log "Removing previous desktop packages"
+    remove_owned_packages "desktop-$OLD_DESKTOP"
+fi
+
 state_set desktop kde
 state_set gaming "${INSTALL_GAMING:-0}"
 state_mark_installed
@@ -59,12 +64,4 @@ state_mark_installed
 echo
 echo "KDE Plasma setup complete. Log out and select Plasma at the login screen if needed."
 
-printf '\nSetup is complete. A reboot is recommended to finish applying system changes.\n'
-while true; do
-    read -r -p 'Reboot now? [y/N] ' answer < /dev/tty || break
-    case "${answer,,}" in
-        y|yes) sudo systemctl reboot; break ;;
-        n|no|'') echo "Reboot skipped. You can reboot later with: sudo systemctl reboot"; break ;;
-        *) echo "Please answer y or n." ;;
-    esac
-done
+ask_reboot
