@@ -20,6 +20,19 @@ require_user() {
     command -v sudo >/dev/null 2>&1 || { echo "sudo is required."; exit 1; }
 }
 
+ask_reboot() {
+    local answer
+    printf '\nSetup is complete. A reboot is recommended to finish applying system changes.\n'
+    while true; do
+        read -r -p 'Reboot now? [y/N] ' answer < /dev/tty
+        case "${answer,,}" in
+            y|yes) sudo systemctl reboot; return 0 ;;
+            ""|n|no) return 0 ;;
+            *) echo "Please answer y or n." ;;
+        esac
+    done
+}
+
 track_flatpak_install() {
     local owner="$1"
     shift
@@ -37,7 +50,6 @@ track_flatpak_install() {
 
 enable_repositories() {
     log "Enabling additional Fedora repositories"
-
     local fedora_version
     fedora_version="$(rpm -E %fedora)"
 
@@ -85,7 +97,6 @@ install_multimedia_codecs() {
 install_docker() {
     log "Installing Docker"
     track_dnf_install docker docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-
     sudo systemctl enable --now docker
 
     if getent group docker >/dev/null 2>&1 && ! id -nG "$USER" | tr ' ' '\n' | grep -qx docker; then
@@ -148,7 +159,6 @@ install_fonts() {
 configure_ghostty() {
     log "Configuring Ghostty"
     mkdir -p "$GHOSTTY_CONFIG_DIR"
-
     if [[ -e "$GHOSTTY_CONFIG" || -e "$GHOSTTY_CONFIG_DIR/config" ]]; then
         echo "Existing Ghostty configuration found; leaving it untouched."
         return
@@ -164,7 +174,6 @@ EOF
 
 install_apps() {
     enable_repositories
-
     log "Updating Fedora"
     sudo dnf upgrade --refresh -y
 
@@ -240,7 +249,6 @@ install_apps() {
 install_photogimp() {
     log "Setting up PhotoGIMP"
     mkdir -p "$HOME/Downloads"
-
     if [[ -d "$HOME/.config/GIMP" || -d "$HOME/.var/app/org.gimp.GIMP/config/GIMP" ]]; then
         echo "GIMP configuration already exists; leaving it untouched."
         return
