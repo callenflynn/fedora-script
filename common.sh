@@ -110,7 +110,7 @@ install_shell_tools() {
     log "Installing Bash and CLI tools"
     track_dnf_install shell-tools \
         bash git gh openssh-clients starship zoxide fzf ripgrep fd-find bat eza \
-        jq tmux btop tree wget curl unzip tar gzip lazygit cava cmatrix
+        jq tmux btop tree wget curl unzip tar gzip golang cava cmatrix
 
     mkdir -p "$BASH_CONFIG_DIR"
     if [[ ! -f "$BASH_CONFIG" ]]; then
@@ -130,6 +130,14 @@ EOF
     if [[ -f "$HOME/.bashrc" ]] && ! grep -Fqx "$BASH_MARKER" "$HOME/.bashrc"; then
         printf '\n%s\nsource "%s"\n' "$BASH_MARKER" "$BASH_CONFIG" >> "$HOME/.bashrc"
     fi
+
+    log "Installing LazyGit"
+    if [[ ! -x "$HOME/go/bin/lazygit" ]]; then
+        go install github.com/jesseduffield/lazygit@latest
+    else
+        echo "LazyGit is already installed; leaving it untouched."
+    fi
+    state_set lazygit 1
 }
 
 install_pipes_sh() {
