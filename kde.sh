@@ -5,12 +5,22 @@ source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/common.sh"
 require_user
 
 log "Installing KDE Plasma desktop"
-sudo dnf group install -y "KDE Plasma Workspaces"
+sudo dnf install -y @kde-desktop-environment
 
 install_apps
-ask_gaming
-ask_icloud_sync
-ask_proton_pass
+
+if [[ "${INSTALL_GAMING:-0}" == "1" ]]; then
+    install_gaming_apps
+fi
+
+if [[ "${INSTALL_ICLOUD:-0}" == "1" ]]; then
+    install_icloud_sync
+fi
+
+if [[ "${INSTALL_PROTON_PASS:-0}" == "1" ]]; then
+    install_proton_pass
+fi
+
 install_cursor
 install_wallpapers
 
