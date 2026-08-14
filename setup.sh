@@ -87,4 +87,4 @@ mv "$WORK_DIR/bg-saturn-rings.jpg" "$WORK_DIR/bg/saturn-rings.jpg"
 chmod +x "$WORK_DIR/$DESKTOP_SCRIPT"
 
 export INSTALL_GAMING INSTALL_ICLOUD INSTALL_PROTON_PASS
-exec bash "$WORK_DIR/$DESKTOP_SCRIPT"
+bash "$WORK_DIR/$DESKTOP_SCRIPT"
