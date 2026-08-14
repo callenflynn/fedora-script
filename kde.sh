@@ -6,7 +6,11 @@ source "$SCRIPT_DIR/common.sh"
 require_user
 
 log "Installing KDE Plasma desktop"
-track_dnf_install desktop-kde @kde-desktop-environment
+track_dnf_install desktop-kde @kde-desktop-environment sddm
+
+log "Enabling KDE graphical login"
+sudo systemctl set-default graphical.target
+sudo systemctl enable sddm
 
 install_apps
 
@@ -62,6 +66,6 @@ state_set gaming "${INSTALL_GAMING:-0}"
 state_mark_installed
 
 echo
-echo "KDE Plasma setup complete. Log out and select Plasma at the login screen if needed."
+echo "KDE Plasma setup complete. SDDM and graphical boot are enabled."
 
 ask_reboot
