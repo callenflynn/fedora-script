@@ -64,16 +64,26 @@ track_dnf_install() {
 }
 
 remove_owned_packages() {
-    local owner="$1" file pkglist
+    local owner="$1" file pkg
+    local -a installed=()
     file="$(state_file_for "$owner")"
     [[ -s "$file" ]] || return 0
 
+    while IFS= read -r pkg; do
+        [[ -n "$pkg" ]] || continue
+        if rpm -q "$pkg" >/dev/null 2>&1; then
+            installed+=("$pkg")
+        fi
+    done < "$file"
+
+    if ((${#installed[@]} == 0)); then
+        rm -f "$file"
+        return 0
+    fi
+
     echo "Removing packages recorded as installed by Fedora Script for $owner."
     echo "DNF will not autoremove unrelated dependencies."
-    pkglist="$(awk 'NF {printf "%s ", $0}' "$file")"
-    [[ -n "$pkglist" ]] || return 0
-
-    sudo dnf remove -y --no-autoremove $pkglist
+    sudo dnf remove -y --no-autoremove "${installed[@]}"
     rm -f "$file"
 }
 
