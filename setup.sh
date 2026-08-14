@@ -60,6 +60,13 @@ CURRENT_DESKTOP=""
 CURRENT_GAMING=0
 CURRENT_ICLOUD=0
 CURRENT_PROTON=0
+INSTALL_GAMING=0
+INSTALL_ICLOUD=0
+INSTALL_PROTON_PASS=0
+REMOVE_GAMING=0
+REMOVE_ICLOUD=0
+REMOVE_PROTON_PASS=0
+OLD_DESKTOP=""
 
 if state_has_installation; then
     CURRENT_DESKTOP="$(state_get desktop 2>/dev/null || true)"
@@ -125,10 +132,12 @@ NEW_DESKTOP="${DESKTOP_SCRIPT%.sh}"
 if [[ -n "$CURRENT_DESKTOP" && "$CURRENT_DESKTOP" != "$NEW_DESKTOP" ]]; then
     echo
     echo "You are switching from $CURRENT_DESKTOP to $NEW_DESKTOP."
+    echo "The new desktop will be installed first. The old desktop will only be removed after the new desktop installation succeeds."
     echo "Only packages recorded as installed by Fedora Script will be offered for removal."
     if ! ask_yes_no "Continue with the desktop switch?" "no"; then
         exit 0
     fi
+    OLD_DESKTOP="$CURRENT_DESKTOP"
 fi
 
 printf '\nOptional applications\n'
@@ -138,14 +147,11 @@ if [[ "$CURRENT_GAMING" == 1 ]]; then
     if ask_yes_no "Keep gaming applications (Steam, Prism Launcher, Heroic)?" "yes"; then
         INSTALL_GAMING=1
     else
-        INSTALL_GAMING=0
         REMOVE_GAMING=1
     fi
 else
     if ask_yes_no "Install gaming applications (Steam, Prism Launcher, Heroic)?" "no"; then
         INSTALL_GAMING=1
-    else
-        INSTALL_GAMING=0
     fi
 fi
 
@@ -153,14 +159,11 @@ if [[ "$CURRENT_ICLOUD" == 1 ]]; then
     if ask_yes_no "Keep iCloud sync?" "yes"; then
         INSTALL_ICLOUD=1
     else
-        INSTALL_ICLOUD=0
         REMOVE_ICLOUD=1
     fi
 else
     if ask_yes_no "Set up iCloud sync?" "no"; then
         INSTALL_ICLOUD=1
-    else
-        INSTALL_ICLOUD=0
     fi
 fi
 
@@ -168,14 +171,11 @@ if [[ "$CURRENT_PROTON" == 1 ]]; then
     if ask_yes_no "Keep Proton Pass?" "yes"; then
         INSTALL_PROTON_PASS=1
     else
-        INSTALL_PROTON_PASS=0
         REMOVE_PROTON_PASS=1
     fi
 else
     if ask_yes_no "Install Proton Pass as your password manager?" "no"; then
         INSTALL_PROTON_PASS=1
-    else
-        INSTALL_PROTON_PASS=0
     fi
 fi
 
@@ -189,10 +189,6 @@ while true; do
 done &
 SUDO_KEEPALIVE_PID=$!
 
-if [[ -n "$CURRENT_DESKTOP" && "$CURRENT_DESKTOP" != "$NEW_DESKTOP" ]]; then
-    remove_owned_packages "desktop-$CURRENT_DESKTOP"
-fi
-
 printf '\nDownloading %s...\n' "$DESKTOP_SCRIPT"
 download "$BASE_URL/common.sh" "$WORK_DIR/common.sh"
 download "$BASE_URL/$DESKTOP_SCRIPT" "$WORK_DIR/$DESKTOP_SCRIPT"
@@ -204,4 +200,5 @@ chmod +x "$WORK_DIR/$DESKTOP_SCRIPT"
 
 export INSTALL_GAMING INSTALL_ICLOUD INSTALL_PROTON_PASS
 export REMOVE_GAMING REMOVE_ICLOUD REMOVE_PROTON_PASS
+export OLD_DESKTOP
 exec bash "$WORK_DIR/$DESKTOP_SCRIPT"
