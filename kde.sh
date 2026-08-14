@@ -58,3 +58,13 @@ state_mark_installed
 
 echo
 echo "KDE Plasma setup complete. Log out and select Plasma at the login screen if needed."
+
+printf '\nSetup is complete. A reboot is recommended to finish applying system changes.\n'
+while true; do
+    read -r -p 'Reboot now? [y/N] ' answer < /dev/tty || break
+    case "${answer,,}" in
+        y|yes) sudo systemctl reboot; break ;;
+        n|no|'') echo "Reboot skipped. You can reboot later with: sudo systemctl reboot"; break ;;
+        *) echo "Please answer y or n." ;;
+    esac
+done
