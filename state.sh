@@ -59,22 +59,17 @@ track_dnf_install() {
 }
 
 remove_owned_packages() {
-    local owner="$1" file
+    local owner="$1" file pkglist
     file="$(state_file_for "$owner")"
     [[ -s "$file" ]] || return 0
 
-    echo "Packages recorded as installed by Fedora Script for $owner:"
-    sed 's/^/  /' "$file"
-    echo
-    echo "DNF will keep packages that are still required by other installed software."
-    sudo dnf remove --assumeno $(cat "$file")
-    if ask_yes_no "Apply this removal?"; then
-        sudo dnf remove -y $(cat "$file")
-        rm -f "$file"
-    else
-        echo "Removal cancelled."
-        return 1
-    fi
+    echo "Removing packages recorded as installed by Fedora Script for $owner."
+    echo "The removal uses DNF's --no-autoremove mode to avoid removing unrelated dependencies."
+    pkglist="$(awk 'NF {printf "%s ", $0}' "$file")"
+    [[ -n "$pkglist" ]] || return 0
+
+    sudo dnf remove -y --no-autoremove $pkglist
+    rm -f "$file"
 }
 
 backup_path() {
