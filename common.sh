@@ -4,6 +4,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 WALLPAPER_DIR="$HOME/Pictures/Wallpapers"
 CURSOR_DIR="$HOME/.local/share/icons/McMojave-cursors"
+GHOSTTY_CONFIG_DIR="$HOME/.config/ghostty"
+GHOSTTY_CONFIG="$GHOSTTY_CONFIG_DIR/config.ghostty"
+BASH_CONFIG_DIR="$HOME/.config/fedora-script/bash"
+BASH_CONFIG="$BASH_CONFIG_DIR/bashrc"
+BASH_MARKER="# Fedora Script managed Bash configuration"
 
 # state.sh is downloaded beside this script by setup.sh.
 # shellcheck source=/dev/null
@@ -31,15 +36,108 @@ track_flatpak_install() {
     sort -u "$(state_file_for "flatpak-$owner")" -o "$(state_file_for "flatpak-$owner")" 2>/dev/null || true
 }
 
+enable_repositories() {
+    log "Enabling additional Fedora repositories"
+
+    local fedora_version
+    fedora_version="$(rpm -E %fedora)"
+
+    if ! rpm -q rpmfusion-free-release >/dev/null 2>&1; then
+        track_dnf_install repositories "https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-${fedora_version}.noarch.rpm"
+    else
+        echo "RPM Fusion Free is already enabled."
+    fi
+
+    if ! rpm -q rpmfusion-nonfree-release >/dev/null 2>&1; then
+        track_dnf_install repositories "https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${fedora_version}.noarch.rpm"
+    else
+        echo "RPM Fusion Nonfree is already enabled."
+    fi
+
+    if [[ ! -f /etc/yum.repos.d/docker-ce.repo ]]; then
+        sudo dnf config-manager addrepo --from-repofile=https://download.docker.com/linux/fedora/docker-ce.repo
+    else
+        echo "Docker repository is already enabled."
+    fi
+}
+
+install_docker() {
+    log "Installing Docker"
+    track_dnf_install docker \
+        docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+    sudo systemctl enable --now docker
+
+    if getent group docker >/dev/null 2>&1 && ! id -nG "$USER" | tr ' ' '\n' | grep -qx docker; then
+        sudo usermod -aG docker "$USER"
+        echo "Added $USER to the docker group. Log out and back in before using Docker without sudo."
+    fi
+}
+
+install_shell_tools() {
+    log "Installing Bash and CLI tools"
+    track_dnf_install shell-tools \
+        bash git gh openssh-clients starship zoxide fzf ripgrep fd-find bat eza \
+        jq tmux btop tree wget curl unzip tar gzip lazygit
+
+    mkdir -p "$BASH_CONFIG_DIR"
+    if [[ ! -f "$BASH_CONFIG" ]]; then
+        cat > "$BASH_CONFIG" <<'EOF'
+# Fedora Script managed Bash configuration
+
+if command -v starship >/dev/null 2>&1; then
+    eval "$(starship init bash)"
+fi
+
+if command -v zoxide >/dev/null 2>&1; then
+    eval "$(zoxide init bash)"
+fi
+EOF
+    fi
+
+    if [[ -f "$HOME/.bashrc" ]] && ! grep -Fqx "$BASH_MARKER" "$HOME/.bashrc"; then
+        printf '\n%s\nsource "%s"\n' "$BASH_MARKER" "$BASH_CONFIG" >> "$HOME/.bashrc"
+    fi
+}
+
+install_fonts() {
+    log "Installing fonts"
+    track_dnf_install fonts \
+        jetbrains-mono-fonts fira-code-fonts cascadia-mono-nf-fonts
+}
+
+configure_ghostty() {
+    log "Configuring Ghostty"
+    mkdir -p "$GHOSTTY_CONFIG_DIR"
+
+    if [[ -e "$GHOSTTY_CONFIG" || -e "$GHOSTTY_CONFIG_DIR/config" ]]; then
+        echo "Existing Ghostty configuration found; leaving it untouched."
+        return
+    fi
+
+    cat > "$GHOSTTY_CONFIG" <<'EOF'
+# Fedora Script default terminal configuration
+font-family = "JetBrains Mono"
+font-family = "Fira Code"
+font-family = "Cascadia Mono NF"
+EOF
+}
+
 install_apps() {
+    enable_repositories
+
     log "Updating Fedora"
     sudo dnf upgrade --refresh -y
 
     log "Installing default Fedora applications"
     track_dnf_install base-apps \
-        vim wget git konsole neovim lazygit ripgrep fd-find curl gcc \
+        vim wget git konsole neovim ripgrep fd-find curl gcc \
         tree-sitter-cli make unzip tar gzip flatpak btop vlc libreoffice \
         blender obs-studio xdg-utils dnf-plugins-core
+
+    install_shell_tools
+    install_fonts
+    install_docker
 
     log "Enabling Flathub"
     flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
@@ -48,7 +146,10 @@ install_apps() {
     if ! command -v ghostty >/dev/null 2>&1; then
         sudo dnf -y copr enable scottames/ghostty
         track_dnf_install ghostty ghostty
+    else
+        echo "Ghostty is already installed; leaving it untouched."
     fi
+    configure_ghostty
 
     log "Installing Zed"
     if ! command -v zed >/dev/null 2>&1 && [[ ! -x "$HOME/.local/bin/zed" ]]; then
