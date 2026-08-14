@@ -6,7 +6,20 @@ source "$SCRIPT_DIR/common.sh"
 require_user
 
 log "Installing KDE Plasma desktop"
-track_dnf_install desktop-kde @kde-desktop-environment sddm
+track_dnf_install desktop-kde @kde-desktop-environment
+
+log "Installing SDDM display manager"
+track_dnf_install sddm sddm
+
+if ! rpm -q sddm >/dev/null 2>&1; then
+    echo "ERROR: SDDM was not installed successfully. KDE setup cannot continue." >&2
+    exit 1
+fi
+
+if [[ ! -f /usr/lib/systemd/system/sddm.service ]]; then
+    echo "ERROR: SDDM is installed, but sddm.service was not found." >&2
+    exit 1
+fi
 
 log "Enabling KDE graphical login"
 sudo systemctl set-default graphical.target
