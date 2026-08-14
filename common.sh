@@ -12,18 +12,6 @@ require_user() {
     command -v sudo >/dev/null 2>&1 || { echo "sudo is required."; exit 1; }
 }
 
-ask_yes_no() {
-    local prompt="$1" answer
-    while true; do
-        read -r -p "$prompt [y/N] " answer
-        case "${answer,,}" in
-            y|yes) return 0 ;;
-            n|no|"") return 1 ;;
-            *) echo "Please answer y or n." ;;
-        esac
-    done
-}
-
 install_apps() {
     log "Updating Fedora"
     sudo dnf upgrade --refresh -y
@@ -122,16 +110,13 @@ install_gaming_apps() {
 }
 
 ask_gaming() {
-    if ask_yes_no "Install gaming applications (Steam, Prism Launcher, Heroic)?"; then
+    if [[ "${INSTALL_GAMING:-0}" == "1" ]]; then
         install_gaming_apps
     fi
 }
 
 install_icloud_sync() {
-    printf '\nWARNING: iCloud sync uses Snap. This will install and configure Snap on Fedora.\n'
-    if ! ask_yes_no "Continue with Snap and iCloud sync?"; then return; fi
-
-    log "Setting up Snap"
+    log "Setting up Snap and iCloud sync"
     sudo dnf install -y snapd
     sudo systemctl enable --now snapd.socket
     if [[ ! -e /snap ]]; then
@@ -143,7 +128,8 @@ install_icloud_sync() {
 }
 
 ask_icloud_sync() {
-    if ask_yes_no "Set up iCloud sync?"; then
+    if [[ "${INSTALL_ICLOUD:-0}" == "1" ]]; then
+        echo "WARNING: iCloud sync uses Snap. This will install and configure Snap on Fedora."
         install_icloud_sync
     fi
 }
@@ -159,7 +145,7 @@ install_proton_pass() {
 }
 
 ask_proton_pass() {
-    if ask_yes_no "Install Proton Pass as your password manager?"; then
+    if [[ "${INSTALL_PROTON_PASS:-0}" == "1" ]]; then
         install_proton_pass
     fi
 }
