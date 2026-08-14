@@ -15,7 +15,7 @@ require_user() {
 ask_yes_no() {
     local prompt="$1" answer
     while true; do
-        read -r -p "$prompt [y/N] " answer </dev/tty
+        read -r -p "$prompt [y/N] " answer
         case "${answer,,}" in
             y|yes) return 0 ;;
             n|no|"") return 1 ;;
