@@ -129,19 +129,19 @@ printf '%s\n' '--------------------'
 if ask_yes_no "Install gaming applications (Steam, Prism Launcher, Heroic)?"; then
     INSTALL_GAMING=1
 else
-    INSTALL_GAMING=0
+    INSTALL_GAMING="$CURRENT_GAMING"
 fi
 
 if ask_yes_no "Set up iCloud sync?"; then
     INSTALL_ICLOUD=1
 else
-    INSTALL_ICLOUD=0
+    INSTALL_ICLOUD="$CURRENT_ICLOUD"
 fi
 
 if ask_yes_no "Install Proton Pass as your password manager?"; then
     INSTALL_PROTON_PASS=1
 else
-    INSTALL_PROTON_PASS=0
+    INSTALL_PROTON_PASS="$CURRENT_PROTON"
 fi
 
 printf '\nRequesting administrator access...\n'
