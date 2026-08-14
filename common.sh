@@ -10,8 +10,6 @@ BASH_CONFIG_DIR="$HOME/.config/fedora-script/bash"
 BASH_CONFIG="$BASH_CONFIG_DIR/bashrc"
 BASH_MARKER="# Fedora Script managed Bash configuration"
 
-# state.sh is downloaded beside this script by setup.sh.
-# shellcheck source=/dev/null
 source "$SCRIPT_DIR/state.sh"
 
 log() { printf '\n\033[1;36m==> %s\033[0m\n' "$1"; }
@@ -64,10 +62,16 @@ enable_repositories() {
 install_multimedia_codecs() {
     log "Installing multimedia codecs"
     sudo dnf swap -y ffmpeg-free ffmpeg --allowerasing
-    sudo dnf group install -y "Multimedia"
-    track_dnf_install multimedia-codecs \
-        gstreamer1-plugins-base gstreamer1-plugins-good \
-        gstreamer1-plugins-bad-free gstreamer1-plugins-ugly
+    sudo dnf install -y --setopt=install_weak_deps=False \
+        gstreamer1-plugins-good \
+        gstreamer1-plugins-bad-free \
+        gstreamer1-plugins-bad-free-extras \
+        gstreamer1-plugins-bad-freeworld \
+        gstreamer1-plugins-ugly \
+        gstreamer1-plugin-openh264 \
+        gstreamer1-libav \
+        lame-libs
+    sudo dnf config-manager setopt fedora-cisco-openh264.enabled=1 || true
 }
 
 install_docker() {
@@ -248,12 +252,20 @@ install_gaming_apps() {
     state_set gaming 1
 }
 
+remove_gaming_apps() {
+    log "Removing Fedora Script gaming applications"
+    remove_owned_flatpaks gaming-flatpaks
+    remove_owned_packages gaming-prismlauncher
+    state_set gaming 0
+}
+
 install_icloud_sync() {
     log "Setting up Snap and iCloud sync"
     track_dnf_install icloud-snap snapd
     sudo systemctl enable --now snapd.socket
     if [[ ! -e /snap ]]; then
         sudo ln -s /var/lib/snapd/snap /snap
+        state_set snap_link 1
     fi
 
     log "Installing iCloud for Linux"
@@ -265,15 +277,34 @@ install_icloud_sync() {
     state_set icloud 1
 }
 
+remove_icloud_sync() {
+    log "Removing Fedora Script iCloud sync"
+    if snap list icloud-for-linux >/dev/null 2>&1; then
+        sudo snap remove icloud-for-linux
+    fi
+    if [[ "$(state_get snap_link 2>/dev/null || true)" == "1" && -L /snap ]]; then
+        sudo rm -f /snap
+        state_set snap_link 0
+    fi
+    remove_owned_packages icloud-snap
+    state_set icloud 0
+}
+
 install_proton_pass() {
     log "Installing Proton Pass"
     local rpm_url="https://proton.me/download/pass/linux/proton-pass-1.38.1-1.x86_64.rpm"
     local rpm_file="$HOME/Downloads/proton-pass.rpm"
     mkdir -p "$HOME/Downloads"
     curl -fL "$rpm_url" -o "$rpm_file"
-    sudo dnf install -y "$rpm_file"
+    track_dnf_install proton-pass "$rpm_file"
     rm -f "$rpm_file"
     state_set proton_pass 1
+}
+
+remove_proton_pass() {
+    log "Removing Fedora Script Proton Pass"
+    remove_owned_packages proton-pass
+    state_set proton_pass 0
 }
 
 install_cursor() {
