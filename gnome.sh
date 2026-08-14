@@ -86,3 +86,13 @@ state_mark_installed
 echo
 echo "GNOME setup complete. Log out and select GNOME at the login screen if needed."
 echo "ArcMenu and GSConnect were installed when compatible with this GNOME release."
+
+printf '\nSetup is complete. A reboot is recommended to finish applying system changes.\n'
+while true; do
+    read -r -p 'Reboot now? [y/N] ' answer < /dev/tty || break
+    case "${answer,,}" in
+        y|yes) sudo systemctl reboot; break ;;
+        n|no|'') echo "Reboot skipped. You can reboot later with: sudo systemctl reboot"; break ;;
+        *) echo "Please answer y or n." ;;
+    esac
+done
