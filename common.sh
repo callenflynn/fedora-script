@@ -61,10 +61,18 @@ enable_repositories() {
     fi
 }
 
+install_multimedia_codecs() {
+    log "Installing multimedia codecs"
+    sudo dnf swap -y ffmpeg-free ffmpeg --allowerasing
+    sudo dnf group install -y "Multimedia"
+    track_dnf_install multimedia-codecs \
+        gstreamer1-plugins-base gstreamer1-plugins-good \
+        gstreamer1-plugins-bad-free gstreamer1-plugins-ugly
+}
+
 install_docker() {
     log "Installing Docker"
-    track_dnf_install docker \
-        docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    track_dnf_install docker docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
     sudo systemctl enable --now docker
 
@@ -78,7 +86,7 @@ install_shell_tools() {
     log "Installing Bash and CLI tools"
     track_dnf_install shell-tools \
         bash git gh openssh-clients starship zoxide fzf ripgrep fd-find bat eza \
-        jq tmux btop tree wget curl unzip tar gzip lazygit
+        jq tmux btop tree wget curl unzip tar gzip lazygit cava
 
     mkdir -p "$BASH_CONFIG_DIR"
     if [[ ! -f "$BASH_CONFIG" ]]; then
@@ -102,8 +110,7 @@ EOF
 
 install_fonts() {
     log "Installing fonts"
-    track_dnf_install fonts \
-        jetbrains-mono-fonts fira-code-fonts cascadia-mono-nf-fonts
+    track_dnf_install fonts jetbrains-mono-fonts fira-code-fonts cascadia-mono-nf-fonts
 }
 
 configure_ghostty() {
@@ -135,6 +142,7 @@ install_apps() {
         tree-sitter-cli make unzip tar gzip flatpak btop vlc libreoffice \
         blender obs-studio xdg-utils dnf-plugins-core
 
+    install_multimedia_codecs
     install_shell_tools
     install_fonts
     install_docker
