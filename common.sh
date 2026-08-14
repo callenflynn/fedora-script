@@ -109,8 +109,17 @@ install_docker() {
 install_shell_tools() {
     log "Installing Bash and CLI tools"
     track_dnf_install shell-tools \
-        bash git gh openssh-clients starship zoxide fzf ripgrep fd-find bat eza \
+        bash git gh openssh-clients zoxide fzf ripgrep fd-find bat eza \
         jq tmux btop tree wget curl unzip tar gzip golang cava cmatrix
+
+    log "Installing Starship"
+    if ! command -v starship >/dev/null 2>&1; then
+        curl -sS https://starship.rs/install.sh | sh -s -- -y
+        state_set starship 1
+    else
+        echo "Starship is already installed; leaving it untouched."
+        state_set starship 1
+    fi
 
     mkdir -p "$BASH_CONFIG_DIR"
     if [[ ! -f "$BASH_CONFIG" ]]; then
