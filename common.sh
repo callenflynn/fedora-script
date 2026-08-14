@@ -131,7 +131,7 @@ install_apps() {
 
     log "Installing default Fedora applications"
     track_dnf_install base-apps \
-        vim wget git konsole neovim ripgrep fd-find curl gcc \
+        vim wget git neovim ripgrep fd-find curl gcc \
         tree-sitter-cli make unzip tar gzip flatpak btop vlc libreoffice \
         blender obs-studio xdg-utils dnf-plugins-core
 
