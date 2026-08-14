@@ -27,11 +27,16 @@ state_set() {
 }
 
 state_has_installation() {
-    [[ "$(state_get version 2>/dev/null || true)" == "1" ]]
+    [[ "$(state_get version 2>/dev/null || true)" == "1" || "$(state_get running 2>/dev/null || true)" == "1" ]]
+}
+
+state_mark_running() {
+    state_set running 1
 }
 
 state_mark_installed() {
     state_set version 1
+    state_set running 0
     state_set last_run "$(date -Iseconds)"
 }
 
@@ -64,11 +69,25 @@ remove_owned_packages() {
     [[ -s "$file" ]] || return 0
 
     echo "Removing packages recorded as installed by Fedora Script for $owner."
-    echo "The removal uses DNF's --no-autoremove mode to avoid removing unrelated dependencies."
+    echo "DNF will not autoremove unrelated dependencies."
     pkglist="$(awk 'NF {printf "%s ", $0}' "$file")"
     [[ -n "$pkglist" ]] || return 0
 
     sudo dnf remove -y --no-autoremove $pkglist
+    rm -f "$file"
+}
+
+remove_owned_flatpaks() {
+    local owner="$1" file app
+    file="$(state_file_for "flatpak-$owner")"
+    [[ -s "$file" ]] || return 0
+
+    while IFS= read -r app; do
+        [[ -n "$app" ]] || continue
+        if flatpak info "$app" >/dev/null 2>&1; then
+            flatpak uninstall -y "$app"
+        fi
+    done < "$file"
     rm -f "$file"
 }
 
