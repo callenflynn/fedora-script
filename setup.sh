@@ -10,6 +10,11 @@ if [[ $EUID -eq 0 ]]; then
     exit 1
 fi
 
+if ! command -v sudo >/dev/null 2>&1; then
+    echo "sudo is required."
+    exit 1
+fi
+
 if command -v curl >/dev/null 2>&1; then
     download() {
         curl -fsSL "$1" -o "$2"
@@ -30,7 +35,7 @@ printf '  1) GNOME\n'
 printf '  2) KDE Plasma\n\n'
 
 while true; do
-    read -r -p 'Enter 1 or 2: ' choice
+    read -r -p 'Enter 1 or 2: ' choice </dev/tty
     case "$choice" in
         1) DESKTOP_SCRIPT="gnome.sh"; break ;;
         2) DESKTOP_SCRIPT="kde.sh"; break ;;
