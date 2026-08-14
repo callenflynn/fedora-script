@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
 source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/common.sh"
 
 require_user
 
 log "Installing GNOME desktop"
-sudo dnf install -y @gnome-desktop
+sudo dnf install -y @workstation-product-environment
 
 install_apps
 
