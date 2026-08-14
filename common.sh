@@ -9,6 +9,7 @@ GHOSTTY_CONFIG="$GHOSTTY_CONFIG_DIR/config.ghostty"
 BASH_CONFIG_DIR="$HOME/.config/fedora-script/bash"
 BASH_CONFIG="$BASH_CONFIG_DIR/bashrc"
 BASH_MARKER="# Fedora Script managed Bash configuration"
+PIPES_BIN="$HOME/.local/bin/pipes.sh"
 
 source "$SCRIPT_DIR/state.sh"
 
@@ -97,7 +98,7 @@ install_shell_tools() {
     log "Installing Bash and CLI tools"
     track_dnf_install shell-tools \
         bash git gh openssh-clients starship zoxide fzf ripgrep fd-find bat eza \
-        jq tmux btop tree wget curl unzip tar gzip lazygit cava
+        jq tmux btop tree wget curl unzip tar gzip lazygit cava cmatrix
 
     mkdir -p "$BASH_CONFIG_DIR"
     if [[ ! -f "$BASH_CONFIG" ]]; then
@@ -117,6 +118,26 @@ EOF
     if [[ -f "$HOME/.bashrc" ]] && ! grep -Fqx "$BASH_MARKER" "$HOME/.bashrc"; then
         printf '\n%s\nsource "%s"\n' "$BASH_MARKER" "$BASH_CONFIG" >> "$HOME/.bashrc"
     fi
+}
+
+install_pipes_sh() {
+    log "Installing pipes.sh"
+    mkdir -p "$(dirname "$PIPES_BIN")"
+    if [[ -x "$PIPES_BIN" ]]; then
+        echo "pipes.sh is already installed; leaving it untouched."
+        return
+    fi
+
+    local tmp_dir
+    tmp_dir="$(mktemp -d)"
+    if git clone --depth 1 https://github.com/pipeseroni/pipes.sh "$tmp_dir/pipes.sh"; then
+        install -m 0755 "$tmp_dir/pipes.sh/pipes.sh" "$PIPES_BIN"
+    else
+        rm -rf "$tmp_dir"
+        echo "Failed to download pipes.sh." >&2
+        return 1
+    fi
+    rm -rf "$tmp_dir"
 }
 
 install_fonts() {
@@ -155,6 +176,7 @@ install_apps() {
 
     install_multimedia_codecs
     install_shell_tools
+    install_pipes_sh
     install_fonts
     install_docker
 
