@@ -35,7 +35,7 @@ printf '  1) GNOME\n'
 printf '  2) KDE Plasma\n\n'
 
 while true; do
-    read -r -p 'Enter 1 or 2: ' choice </dev/tty
+    read -r -p 'Enter 1 or 2: ' choice
     case "$choice" in
         1) DESKTOP_SCRIPT="gnome.sh"; break ;;
         2) DESKTOP_SCRIPT="kde.sh"; break ;;
