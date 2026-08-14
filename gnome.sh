@@ -42,16 +42,17 @@ install_gnome_extension() {
     local pk="$2"
     local shell_version
     shell_version="$(gnome-shell --version | sed -E 's/.* ([0-9]+)\..*/\1/')"
-    local url="https://extensions.gnome.org/extension-info/?pk=${pk}&shell_version=${shell_version}&api_version=1"
+    local info_file
+    info_file="$(mktemp)"
     local zip
     zip="$(mktemp --suffix=.zip)"
+
     if [[ -d "$EXTENSIONS_DIR/$uuid" ]]; then
         echo "GNOME extension $uuid is already installed; leaving it untouched."
-    elif curl -fsSL "$url" -o "$zip"; then
+    elif curl -fsSL "https://extensions.gnome.org/extension-info/?pk=${pk}&shell_version=${shell_version}&api_version=1" -o "$info_file"; then
         local download_url
-        download_url="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("download_url", ""))' "$zip" 2>/dev/null || true)"
-        if [[ -n "$download_url" ]]; then
-            curl -fsSL "$download_url" -o "$zip"
+        download_url="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("download_url", ""))' "$info_file" 2>/dev/null || true)"
+        if [[ -n "$download_url" ]] && curl -fsSL "$download_url" -o "$zip"; then
             mkdir -p "$EXTENSIONS_DIR/$uuid"
             unzip -q "$zip" -d "$EXTENSIONS_DIR/$uuid"
         else
@@ -60,11 +61,11 @@ install_gnome_extension() {
     else
         echo "Could not query GNOME Extensions for $uuid."
     fi
-    rm -f "$zip"
+
+    rm -f "$info_file" "$zip"
 }
 
 install_gnome_extension "arcmenu@arcmenu.com" 3628
-install_gnome_extension "gsconnect@andyholmes.github.io" 1319
 
 log "Configuring GNOME dark mode, cursor, and font"
 gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' || true
