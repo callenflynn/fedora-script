@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
-source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/common.sh"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/common.sh"
 
 require_user
 
 log "Installing KDE Plasma desktop"
-sudo dnf install -y @kde-desktop-environment
+track_dnf_install desktop-kde @kde-desktop-environment
 
 install_apps
 
@@ -38,6 +39,10 @@ if [[ -n "$FIRST_WALLPAPER" ]] && command -v plasma-apply-wallpaperimage >/dev/n
 fi
 
 command -v kbuildsycoca6 >/dev/null 2>&1 && kbuildsycoca6 >/dev/null 2>&1 || true
+
+state_set desktop kde
+state_set gaming "${INSTALL_GAMING:-0}"
+state_mark_installed
 
 echo
 echo "KDE Plasma setup complete. Log out and select Plasma at the login screen if needed."
