@@ -5,6 +5,10 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 WALLPAPER_DIR="$HOME/Pictures/Wallpapers"
 CURSOR_DIR="$HOME/.local/share/icons/McMojave-cursors"
 
+# state.sh is downloaded beside this script by setup.sh.
+# shellcheck source=/dev/null
+source "$SCRIPT_DIR/state.sh"
+
 log() { printf '\n\033[1;36m==> %s\033[0m\n' "$1"; }
 
 require_user() {
@@ -12,12 +16,27 @@ require_user() {
     command -v sudo >/dev/null 2>&1 || { echo "sudo is required."; exit 1; }
 }
 
+track_flatpak_install() {
+    local owner="$1"
+    shift
+    local app
+    for app in "$@"; do
+        if ! flatpak info "$app" >/dev/null 2>&1; then
+            flatpak install -y flathub "$app"
+            printf '%s\n' "$app" >> "$(state_file_for "flatpak-$owner")"
+        else
+            echo "$app is already installed; leaving it untouched."
+        fi
+    done
+    sort -u "$(state_file_for "flatpak-$owner")" -o "$(state_file_for "flatpak-$owner")" 2>/dev/null || true
+}
+
 install_apps() {
     log "Updating Fedora"
     sudo dnf upgrade --refresh -y
 
     log "Installing default Fedora applications"
-    sudo dnf install -y \
+    track_dnf_install base-apps \
         vim wget git konsole neovim lazygit ripgrep fd-find curl gcc \
         tree-sitter-cli make unzip tar gzip flatpak btop vlc libreoffice \
         blender obs-studio xdg-utils dnf-plugins-core
@@ -28,18 +47,22 @@ install_apps() {
     log "Installing Ghostty"
     if ! command -v ghostty >/dev/null 2>&1; then
         sudo dnf -y copr enable scottames/ghostty
-        sudo dnf install -y ghostty
+        track_dnf_install ghostty ghostty
     fi
 
     log "Installing Zed"
     if ! command -v zed >/dev/null 2>&1 && [[ ! -x "$HOME/.local/bin/zed" ]]; then
         curl -f https://zed.dev/install.sh | sh
+    else
+        echo "Zed is already installed; leaving it untouched."
     fi
 
     log "Installing fetch"
     if ! command -v fetch >/dev/null 2>&1; then
         sudo dnf -y copr enable realorangekun/fetch
-        sudo dnf install -y fetch
+        track_dnf_install fetch fetch
+    else
+        echo "fetch is already installed; leaving it untouched."
     fi
 
     log "Installing LazyVim"
@@ -51,7 +74,7 @@ install_apps() {
     fi
 
     log "Installing default Flatpak applications"
-    flatpak install -y flathub \
+    track_flatpak_install base-flatpaks \
         com.spotify.Client \
         com.discordapp.Discord \
         md.obsidian.Obsidian \
@@ -62,7 +85,9 @@ install_apps() {
     log "Installing Brave Browser"
     if ! command -v brave-browser >/dev/null 2>&1; then
         sudo dnf config-manager addrepo --from-repofile=https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
-        sudo dnf install -y brave-browser
+        track_dnf_install brave brave-browser
+    else
+        echo "Brave is already installed; leaving it untouched."
     fi
     xdg-settings set default-web-browser brave-browser.desktop || true
 
@@ -73,6 +98,11 @@ install_apps() {
 install_photogimp() {
     log "Setting up PhotoGIMP"
     mkdir -p "$HOME/Downloads"
+
+    if [[ -d "$HOME/.config/GIMP" || -d "$HOME/.var/app/org.gimp.GIMP/config/GIMP" ]]; then
+        echo "GIMP configuration already exists; leaving it untouched."
+        return
+    fi
 
     timeout 15s flatpak run org.gimp.GIMP >/dev/null 2>&1 || true
     sleep 2
@@ -91,7 +121,7 @@ install_davinci_resolve() {
     installer="$(find "$HOME/Downloads" -maxdepth 1 -type f -iname 'DaVinci_Resolve*_Linux.run' -print -quit 2>/dev/null || true)"
 
     if [[ -n "$installer" ]]; then
-        sudo dnf install -y libxcrypt-compat libcurl mesa-libGLU fuse fuse-libs
+        track_dnf_install davinci-dependencies libxcrypt-compat libcurl mesa-libGLU fuse fuse-libs
         chmod +x "$installer"
         sudo SKIP_PACKAGE_CHECK=1 "$installer" -i
         return
@@ -103,35 +133,27 @@ install_davinci_resolve() {
 
 install_gaming_apps() {
     log "Installing gaming applications"
-    flatpak install -y flathub com.valvesoftware.Steam
+    track_flatpak_install gaming-flatpaks com.valvesoftware.Steam com.heroicgameslauncher.hgl
     sudo dnf -y copr enable g3tchoo/prismlauncher
-    sudo dnf install -y prismlauncher
-    flatpak install -y flathub com.heroicgameslauncher.hgl
-}
-
-ask_gaming() {
-    if [[ "${INSTALL_GAMING:-0}" == "1" ]]; then
-        install_gaming_apps
-    fi
+    track_dnf_install gaming-prismlauncher prismlauncher
+    state_set gaming 1
 }
 
 install_icloud_sync() {
     log "Setting up Snap and iCloud sync"
-    sudo dnf install -y snapd
+    track_dnf_install icloud-snap snapd
     sudo systemctl enable --now snapd.socket
     if [[ ! -e /snap ]]; then
         sudo ln -s /var/lib/snapd/snap /snap
     fi
 
     log "Installing iCloud for Linux"
-    sudo snap install icloud-for-linux
-}
-
-ask_icloud_sync() {
-    if [[ "${INSTALL_ICLOUD:-0}" == "1" ]]; then
-        echo "WARNING: iCloud sync uses Snap. This will install and configure Snap on Fedora."
-        install_icloud_sync
+    if ! snap list icloud-for-linux >/dev/null 2>&1; then
+        sudo snap install icloud-for-linux
+    else
+        echo "iCloud for Linux is already installed; leaving it untouched."
     fi
+    state_set icloud 1
 }
 
 install_proton_pass() {
@@ -142,20 +164,17 @@ install_proton_pass() {
     curl -fL "$rpm_url" -o "$rpm_file"
     sudo dnf install -y "$rpm_file"
     rm -f "$rpm_file"
-}
-
-ask_proton_pass() {
-    if [[ "${INSTALL_PROTON_PASS:-0}" == "1" ]]; then
-        install_proton_pass
-    fi
+    state_set proton_pass 1
 }
 
 install_cursor() {
     log "Installing McMojave cursor theme"
-    rm -rf "$HOME/.cache/McMojave-cursors"
+    if [[ -d "$CURSOR_DIR" ]]; then
+        echo "McMojave cursor theme is already installed; leaving it untouched."
+        return
+    fi
     git clone --depth 1 https://github.com/vinceliuice/McMojave-cursors "$HOME/.cache/McMojave-cursors"
     mkdir -p "$HOME/.local/share/icons"
-    rm -rf "$CURSOR_DIR"
     cp -a "$HOME/.cache/McMojave-cursors/dist" "$CURSOR_DIR"
 }
 
@@ -165,7 +184,7 @@ install_wallpapers() {
     if [[ -d "$SCRIPT_DIR/bg" ]]; then
         find "$SCRIPT_DIR/bg" -maxdepth 1 -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \) -print0 |
         while IFS= read -r -d '' image; do
-            cp -f "$image" "$WALLPAPER_DIR/"
+            cp -n "$image" "$WALLPAPER_DIR/" 2>/dev/null || true
         done
     fi
 }
