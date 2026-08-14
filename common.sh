@@ -61,7 +61,14 @@ enable_repositories() {
 
 install_multimedia_codecs() {
     log "Installing multimedia codecs"
-    sudo dnf swap -y ffmpeg-free ffmpeg --allowerasing
+    if rpm -q ffmpeg-free >/dev/null 2>&1; then
+        sudo dnf swap -y ffmpeg-free ffmpeg --allowerasing
+    elif ! rpm -q ffmpeg >/dev/null 2>&1; then
+        sudo dnf install -y ffmpeg --allowerasing
+    else
+        echo "Full FFmpeg is already installed."
+    fi
+
     sudo dnf install -y --setopt=install_weak_deps=False \
         gstreamer1-plugins-good \
         gstreamer1-plugins-bad-free \
